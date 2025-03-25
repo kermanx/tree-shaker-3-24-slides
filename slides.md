@@ -3,6 +3,7 @@ theme: seriph
 colorSchema: dark
 themeConfig:
   primary: '#6dA3B2'
+background: https://cdn.jsdelivr.net/gh/slidevjs/slidev-covers@main/static/jnuDx1MOIW8.webp
 ---
 
 # Tree Shaker 报告
@@ -11,9 +12,9 @@ themeConfig:
 
 ---
 
-# 再次介绍 Tree Shaker
+# 重新介绍 Tree Shaker
 
-<div text-4xl text-center p-4 pt-16>
+<div text-4xl text-center p-4 pt-20>
 
 语义层面的 JS 代码体积优化器
 
@@ -27,9 +28,7 @@ themeConfig:
 
 ---
 
-### Demo
-
-### Constant Folding
+# Demo - Constant Folding
 
 <table><tbody><tr><td width="500px"> Input </td><td width="500px"> Output </td></tr><tr>
 <td valign="top">
@@ -57,9 +56,7 @@ export function f() {
 
 ---
 
-### Demo
-
-## Remove Dead Code
+# Demo - Remove Dead Code
 
 <table><tbody><tr><td width="500px"> Input </td><td width="500px"> Output </td></tr><tr>
 <td valign="top">
@@ -104,9 +101,7 @@ g(false);
 
 ---
 
-### Demo
-
-## Object Property Mangling
+# Demo - Object Property Mangling
 
 <table><tbody><tr><td width="500px"> Input </td><td width="500px"> Output </td></tr><tr>
 <td valign="top">
@@ -139,9 +134,7 @@ export function main() {
 
 ---
 
-### Demo
-
-## Class Tree Shaking
+# Demo - Class Tree Shaking
 
 <table><tbody><tr><td width="500px"> Input </td><td width="500px"> Output </td></tr><tr>
 <td valign="top">
@@ -182,9 +175,7 @@ new B().a(A.a);
 
 ---
 
-### Demo
-
-## JSX
+# Demo - JSX
 
 > `createElement` also works, if it is directly imported from `react`.
 
@@ -225,9 +216,7 @@ export function Main() {
 
 ---
 
-### Demo
-
-## React.js
+# Demo - React.js
 
 > We also have special handling for some React.js APIs. For example, React Context, `memo`, `forwardRef`, `useMemo`, etc.
 
@@ -299,14 +288,18 @@ export function main() {
 
 ### 理论来源
 
-tree-shaking 的 “先假定代码无用，通过分析来褪优化其中有用的部分”<br>
+tree-shaking 的 “先假定所有代码无用，通过分析来褪优化其中有用的部分”<br>
 [*Tree-shaking versus dead code elimination* by Rich Harris, 2015](https://medium.com/@Rich_Harris/tree-shaking-versus-dead-code-elimination-d3765df85c80)
+
+> 对比 DCE: 先假定所有代码不能优化，通过规则判断哪些代码可以优化掉
+
+<div h-6 />
 
 ### 两个步骤
 
 <div h-3 />
 
-1. 通过模拟执行代码的方式，收集信息。（有没有对应的术语？）
+1. 通过模拟执行代码的方式，收集信息。（符号执行）
 2. 基于收集的信息来 transform AST，实现代码体积的优化。
 
 第一步逻辑上非常直观，可以说是“以叠加态的方式来执行代码”，但是实现起来要考虑许多问题。
@@ -317,7 +310,11 @@ tree-shaking 的 “先假定代码无用，通过分析来褪优化其中有用
 
 <div />
 
-在分析时，用 Entity 表示一个表达式或变量是什么。Entity 包含两个部分：
+在分析时，用 Entity 表示一个表达式或变量是什么。
+
+$$
+\text{Entity} = \text{Value} \times \text{Dep}
+$$
 
 1. **值**（Value）：一个 Lattice。比如数字或对象或未知值等等。
 
@@ -327,7 +324,7 @@ tree-shaking 的 “先假定代码无用，通过分析来褪优化其中有用
 
     - AST 节点
     - 另外一个 Entity
-    - 代码分支：`ConditionalDep`
+    - 条件分支相关：`BranchingDep`
     - Constant folding 相关：`FoldableDep`, `NotFoldableDep`
     - Mangling 相关：`NoMangle`, `Equal`, `Unequal`
     - ...
@@ -449,7 +446,7 @@ x = 1;
 
 ---
 
-# 1.3. 递归的处理
+# 1.1 递归的处理
 
 <div />
 
@@ -653,11 +650,11 @@ x = a;
 1. 若有副作用就不执行常量折叠
 2. 执行常量折叠，但将副作用提取出来，放在一个 `SequenceExpression` 中。如 `(side_effect, collect_literal)`。
 
-本文采用第二种方案。因为第一种方案会导致 Tree-shaker 的常量折叠极为复杂，而这种情况本身就极少见。
+目前采用了第二种方案。因为第一种方案会导致 Tree-shaker 的常量折叠极为复杂，而这种情况本身就极少见。
 
 ---
 
-## 3.1. 节点状态
+# 3.1. 节点状态
 
 通过一个简单的状态机来表示一个节点是否可以被折叠：
 
@@ -673,7 +670,7 @@ A --->|可能是不是字面量的值| C
 
 ---
 
-## 3.2. 依赖
+# 3.2. 依赖
 
 每当值流经一个节点，如果这个情况最终被保留（没有被删除），这个值就会影响这个节点是否可以被折叠。这恰恰契合 tree-shaker 中值的依赖的概念。
 
@@ -692,31 +689,29 @@ A --->|"NotFoldableDep(node)"| C
 
 ---
 
-## 3.3. 计算过程的删除
+# 3.3. 计算过程的删除
 
 被折叠的节点，我们希望删除其计算过程需要的节点。比如：
 
 ```js
 function f() {
-// ^~~~~~~~~~~ A
+// ~~~~~~~~~~~ A
   return   1   +   2;
-// ^~~~~ B
+// ~~~~~ B
 }
 x = f();
 //  ^~~ C
 ```
 
-优化时会删除整个 `f` 函数，得到 `x = 3`。
+优化时会删除整个 `f` 函数，得到 `x = 3`。故当节点可以被折叠时，就不应当保留它的计算过程。
 
-本文采取的方式是，当节点可以被折叠时，就不试图保留它的计算过程。比如对于 `f()` 节点，在分析时，其原本的值是 `Computed(3, { A, B, C })`，由于它可以被折叠，因此它的值就变成了：
+比如对于 `f()` 节点，在分析时，其原本的依赖是 `{ A, B, C }`，由于它可以被折叠，因此依赖就被替换为：`{ FoldableDep(node=C, value=Entity(3, { A, B, C })) }`。
 
-`Computed(3, FoldableDep(node=C, value=Computed(3, { A, B, C })))`
-
-此时，当它被赋值给 `x` 时，就会消耗掉 `FoldableDep(...)`，而非常规的 `{ A, B, C }`。这一操作根据上文所述，会将 `C` 节点的状态从 `Initial` 变为 `Literal(3)`；但不像之前的值那样会将 A, B, C 节点标记为需要保留。
+此时，当它被赋值给 `x` 时，就会消耗掉 `{ FoldableDep(...) }`，而非常规的 `{ A, B, C }`。这一操作根据上文所述，会将 `C` 节点的状态从 `Initial` 变为 `Literal(3)`；但不像之前的值那样会将 A, B, C 节点标记为需要保留。
 
 ---
 
-### 3.4. 计算过程的保留
+# 3.4. 计算过程的保留
 
 有些节点，在初次分析时被认为可以被折叠，但在后续的分析中又被认为不可以被折叠。比如：
 
@@ -793,7 +788,11 @@ log(obj.a, obj[key]);
 
 ### VSCode 的打包器
 
-VSCode 使用 TypeScript 编写，它在打包时通过调用 TypeScript 提供的代码重构功能来重命名属性名，实现相对安全的属性压缩。这种方式的缺点是只能用于 TypeScript 项目，且项目中若存在跳过类型检查的行为（比如 `as any`），则会导致结果错误。且无法通过此方法压缩打包的第三方库的代码。不适合一般应用程序使用。其[官方博客](https://code.visualstudio.com/blogs/2023/07/20/mangling-vscode)指出，这种方式减小了 14% 的体积。
+VSCode 使用 TypeScript 编写，它在打包时通过调用 TypeScript 提供的代码重构功能来重命名属性名，实现相对安全的属性压缩。
+
+这种方式的缺点是只能用于 TypeScript 项目，且项目中若存在跳过类型检查的行为（比如 `as any`），则会导致结果错误。且无法通过此方法压缩打包的第三方库的代码。不适合一般应用程序使用。
+
+其[官方博客](https://code.visualstudio.com/blogs/2023/07/20/mangling-vscode)指出，这种方式减小了 14% 的体积。
 
 ---
 
@@ -1013,8 +1012,25 @@ x = obj[unknown]
 
     - 这会显著提升一些库的压缩率，比如 noVNC
 
-- 整理代码，写论文
+    - 域敏感
 
-    - 哪些是真正的创新点
+- 整理代码，开始写论文
+
+    - 哪些是真正的创新点？
     - 术语的积累不够
-    - 需要指导
+    - 望指导
+
+<!--
+
+- 总结代码框架/图
+- 核心的贡献点
+- 理论上的抽象
+- 相关工作，使用+区别
+
+-->
+
+---
+layout: end
+---
+
+谢谢！
