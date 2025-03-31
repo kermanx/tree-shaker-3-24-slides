@@ -1,11 +1,5 @@
-# Welcome to [Slidev](https://github.com/slidevjs/slidev)!
+# Slides for Tree-shaker
 
-To start the slide show:
+The project: https://github.com/kermanx/tree-shaker
 
-- `pnpm install`
-- `pnpm dev`
-- visit <http://localhost:3030>
-
-Edit the [slides.md](./slides.md) to see the changes.
-
-Learn more about Slidev at the [documentation](https://sli.dev/).
+View slides: https://kermanx.com/tree-shaker-3-24-slides
